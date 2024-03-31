@@ -9,7 +9,7 @@ We describe the process of calculating carbon emissions from the perspective of 
 
 ## Methodology for estimating LLM carbon emissions
 
-## CO2e calculation
+## Training CO2e calculation
 
 The total carbon footprint ``CO2eq`` resulting from LLM processing is determined by
 ```
@@ -21,17 +21,14 @@ and ``CO2eq_emb`` denotes the embodied carbon footprint of the LLM.
 ## embodied carbon footprint
 To quantify the chip’s embodied carbon footprint ``CO2eq_chip`` within a specific hardware unit is calculated by
 ```
-CO2eq_chip = area ⋅ 𝐶𝑃𝐴
+CO2eq_chip = area * CPA
 ```
-where ``area`` represents the chip’s area. CPA看看这里要不要介绍（The Carbon emitted Per unit Area (
-𝐶𝑃𝐴
-) is contingent on various semiconductor fabrication parameters, including yield, energy consumption per unit area during manufacturing, emissions from chemicals utilized in hardware production, and emissions associated with raw material sourcing for fabrication. ）
-
+where ``area`` represents the chip’s area, ``CPA`` means the carbon emitted per unit area.
 
 ## operational carbon footprint
 The operational carbon footprint ``CO2eq_oper`` attributed to LLM processing is calculated by
 ```
-CO2eq_oper = energy_oper ⋅ carb_inten
+CO2eq_oper = energy_oper * carb_inten
 ```
 where ``energy_oper`` represents the operational energy for LLM processing, and ``carb_inten`` denotes
 the carbon intensity of the specific data center.
@@ -39,7 +36,7 @@ the carbon intensity of the specific data center.
 ### operational energy
 The operational energy ``energy_oper`` associated with LLM processing can be calculated by
 ```
-energy_oper = energy_hard ⋅ PUE
+energy_oper = energy_hard * PUE
 ```
 where ``energy_hard`` denotes the energy used by the computing hardware within a data center, and
 ``PUE`` indicates the PUE of the specific data center.
@@ -47,7 +44,7 @@ where ``energy_hard`` denotes the energy used by the computing hardware within a
 ### hardware energy
 The single unit ``i`` energy ``energy_hard_i`` consumed by
 ```
-energy_hard_i = P_i ⋅ eff_i ⋅ n_i ⋅ t_i
+energy_hard_i = P_i * eff_i * n_i * t_i
 ```
 where  
 ``P_i`` denotes the peak power of hardware unit ``i``;  
@@ -64,25 +61,37 @@ which is calculated as the actual computing throughput divided by the peak throu
 
 Hardware efficiency may be measured. Narayanan et al. have measured the throughput for end-to-end training, i.e.,
 includes all operations including data loading, optimizer steps, communication, and logging.
-We achieve 52% of peak device throughput for the largest model, and 44% of peak device throughput for the smallest model.
 Table 1 shows the model configurations along with the achieved FLOP/s (both per GPU and aggregate over all GPUs).
-![img.png](img.png)
+![Table_1](./Table_1.png)
 
-Also, it may be used regression coefficients for estimating. The optimal parallelism setting is represented as
+It may be used regression coefficients for estimating. The optimal parallelism setting is represented as
 ``p``,``t``,``d``,``e``, where each variable corresponds to a degree of pipeline, tensor, data, and expert parallelism, respectively.
 The efficiency ``eff_re`` with ``re`` devices can be calculated by
 ```
 when re < n,
-eff_re = r_0 ⋅ re / n ⋅ eff_n
+eff_re = (r_0 * re) / (n * eff_n)
 
 when re > n,
-eff_re = r_1 ⋅ re / n ⋅ eff_n + r_2 ⋅ re
+eff_re = (r_1 * re) / (n * eff_n) + r_2 * re
 ```
 , where ``r_0``, ``r_1``, ``r_2``are fitting constants, ``eff_n``means the highest hardware efficiency,
 and ``n``indicates the number of devices that can achieve ``eff_n``. The number of devices required to achieve optimal hardware efficiency for dense LLM processing is calculated as
 ``n = t ⋅ p ⋅ d``(Narayanan et al., 2021).
 
 ### training time
+The total amount of time needed for end-to-end training on ``T`` tokens can be estimated by
+```
+End-to-end training time ≈ (8 * T * P) / (n * FLOP_peak * eff)
+```
+where ``P`` means the number of parameters in a model, ``n`` represents the number of devices,
+``FLOP_peak`` represents the device peak throughput, ``eff`` represents efficiency of the device.
+
+### parameters size
+The number of parameters in a model ``P`` can be computed as:
+```
+P = 12 * l * h^2 * [1 + 13/12 * h + (V + s) / (12 * l * h)]
+```
+where number of layers ``l``, hidden size ``h``, vocabulary size ``V``, and sequence length ``s``.
 
 ## Using Impact Framework for estimation
 
