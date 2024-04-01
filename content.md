@@ -62,7 +62,7 @@ which is calculated as the actual computing throughput divided by the peak throu
 Hardware efficiency may be measured. Narayanan et al. have measured the throughput for end-to-end training, i.e.,
 includes all operations including data loading, optimizer steps, communication, and logging.
 Table 1 shows the model configurations along with the achieved FLOP/s (both per GPU and aggregate over all GPUs).
-![Table_1](./Table_1.png)
+![Table_1](./image/Table_1.png)
 
 It may be used regression coefficients for estimating. The optimal parallelism setting is represented as
 ``p``,``t``,``d``,``e``, where each variable corresponds to a degree of pipeline, tensor, data, and expert parallelism, respectively.
