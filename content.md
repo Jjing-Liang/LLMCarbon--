@@ -34,14 +34,14 @@ CO2eq = CO2eq_oper + CO2eq_emb
 where ``CO2eq_oper`` indicates the operational carbon footprint of the LLM,
 and ``CO2eq_emb`` denotes the embodied carbon footprint of the LLM.
 
-## embodied carbon footprint
+## Embodied carbon footprint
 To quantify the chip’s embodied carbon footprint ``CO2eq_chip`` within a specific hardware unit is calculated by
 ```
 CO2eq_chip = area * CPA
 ```
 where ``area`` represents the chip’s area, ``CPA`` means the carbon emitted per unit area.
 
-## operational carbon footprint
+## Operational carbon footprint
 The operational carbon footprint ``CO2eq_oper`` attributed to LLM processing is calculated by
 ```
 CO2eq_oper = energy_oper * carb_inten
@@ -49,7 +49,7 @@ CO2eq_oper = energy_oper * carb_inten
 where ``energy_oper`` represents the operational energy for LLM processing, and ``carb_inten`` denotes
 the carbon intensity of the specific data center.
 
-### operational energy
+### Operational energy
 The operational energy ``energy_oper`` associated with LLM processing can be calculated by
 ```
 energy_oper = energy_hard * PUE
@@ -57,7 +57,7 @@ energy_oper = energy_hard * PUE
 where ``energy_hard`` denotes the energy used by the computing hardware within a data center, and
 ``PUE`` indicates the PUE of the specific data center.
 
-### hardware energy
+### Hardware energy
 The single unit ``i`` energy ``energy_hard_i`` consumed by
 ```
 energy_hard_i = P_i * eff_i * n_i * t_i
@@ -71,17 +71,24 @@ efficiency of hardware unit ``i``;
 Hardware units encompass a range of components, including CPUs, LLM computing devices, memories, SSDs, and others.
 The total energy ``energy_hard`` consumed by all hardware units.
 
-### hardware efficiency
-Efficient processing of LLMs relies on achieving high hardware efficiency,
-which is calculated as the actual computing throughput divided by the peak throughput.
+### Training time
+To calculate hardware energy, it is necessary to have the training time. The training time can be estimated by the following:
+- Total train FLOPs required by the model
+- Benchmark of single GPU FLOPs
+- Percent of peak device throughput as estimated using the regression equation
+```
+T = C / (n * FLOP_peak * eff)
+```
+where ``C`` represents the computation required to train the transformer model, in total floating point operations, ``FLOP_peak`` represents the device peak throughput, ``eff`` represents efficiency of the device.
 
-Hardware efficiency may be measured. Narayanan et al. have measured the throughput for end-to-end training, i.e.,
-includes all operations including data loading, optimizer steps, communication, and logging.
-Table 1 shows the model configurations along with the achieved FLOP/s (both per GPU and aggregate over all GPUs).
-![Table_1](./image/Table_1.png)
 
-It may be used regression coefficients for estimating. The optimal parallelism setting is represented as
-``p``,``t``,``d``,``e``, where each variable corresponds to a degree of pipeline, tensor, data, and expert parallelism, respectively.
+### Hardware efficiency
+Efficient processing of LLMs relies on achieving high hardware efficiency, which is calculated as the actual computing throughput divided by the peak throughput.
+The actual computing throughput is calculated as total floating point operations divided by execution time.
+
+#### Hardware efficiency estimation
+If training time is not recorded, throughput is estimated to find total train time and carbon emission. A linear regression using a 2nd order polynomial is fit on the throughput scaling data presented in the paper [Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM](https://arxiv.org/abs/2104.04473).
+The optimal parallelism setting is represented as ``p``,``t``,``d``,``e``, where each variable corresponds to a degree of pipeline, tensor, data, and expert parallelism, respectively.
 The efficiency ``eff_re`` with ``re`` devices can be calculated by
 ```
 when re < n,
@@ -92,22 +99,43 @@ eff_re = (r_1 * re) / (n * eff_n) + r_2 * re
 ```
 , where ``r_0``, ``r_1``, ``r_2``are fitting constants, ``eff_n``means the highest hardware efficiency,
 and ``n``indicates the number of devices that can achieve ``eff_n``. The number of devices required to achieve optimal hardware efficiency for dense LLM processing is calculated as
-``n = t ⋅ p ⋅ d``(Narayanan et al., 2021).
+``n = t ⋅ p ⋅ d``.
 
-### training time
-The total amount of time needed for end-to-end training on ``T`` tokens can be estimated by
-```
-End-to-end training time ≈ (8 * T * P) / (n * FLOP_peak * eff)
-```
-where ``P`` means the number of parameters in a model, ``n`` represents the number of devices,
-``FLOP_peak`` represents the device peak throughput, ``eff`` represents efficiency of the device.
+### Floating point operations
+With ``l`` transformer layers, hidden size ``h``, sequence length ``s``, vocabulary size ``V``, and training batch size ``B``,
+a transformer layer consists of an attention block followed by a 2-layer feed-forward network. A 𝐴𝑚×𝑘 × 𝑋𝑘×𝑛 matrix multiplication requires 2𝑚 × 𝑘 × 𝑛 FLOPs (factor of 2 needed to account for multiplies and adds).
 
-### parameters size
+For the attention block, the main FLOP contributors are the key, query, and value transformation (``6Bsh^2`` operations), 
+attention matrix computation (``2Bs^2h`` operations), attention over values (``2Bs^2h`` operations), 
+and post-attention linear projection (``2Bsh^2`` operations). The feed-forward network increases the hidden size to ``4h`` and then reduces it back to ``h``; this requires ``16Bsh^2`` FLOPs. 
+Summing these together, each transformer layer results in ``24Bsh^2 + 4Bs^2h`` FLOPs for the forward pass.
+
+The other main contributor to the FLOP count is the logit layer in the language model head, the required FLOPs for this operation is ``2Bsh𝑉`` in the forward pass and ``4Bsh𝑉`` in the backward pass, resulting in ``6Bsh𝑉`` FLOPs in total.
+
+The backward pass requires double the number of FLOPs since need to calculate the gradients with respect to both input and weight tensors.
+
+Thus, for a transformer model with ``l`` transformer layers, the total number of floating-point operations is:
+```
+C = C_forward + C_backward ≈ 2PD + 4PD ≈ 6PD
+```
+with parameter size ``P`` and the training dataset size ``D`` (tokens).
+
+### Parameters size
 The number of parameters in a model ``P`` can be computed as:
 ```
-P = 12 * l * h^2 * [1 + 13/12 * h + (V + s) / (12 * l * h)]
+P = 12lh^2 * [1 + 13/12h + (V + s)/(12lh)]
 ```
 where number of layers ``l``, hidden size ``h``, vocabulary size ``V``, and sequence length ``s``.
+
+
+## Inference CO2e calculation
+The total carbon footprint calculation of inference is similar to training. Inference involves running the input data through the model's forward pass without performing 
+any backward pass or gradient updates, thus the computation ``C_inference`` is approximated as
+```
+C_inference ≈ 2P * D_inference
+```
+where ``D_inference`` means inference dataset size (tokens).
+
 
 ## Using Impact Framework for estimation
 
