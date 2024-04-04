@@ -5,9 +5,10 @@
 Since the introduction of ChatGPT, the Large Language Model (LLM) has evolved rapidly - GPT-4, LLama, Claude, Gemini, Mistral, Grok-1 - one new model after another is influencing the whole society. At the same time, the impact of LLM on the environment has also been hotly debated. At this stage, there are many studies or articles discussing the impact of AI/ML/LLM on the environment. [A study](https://www.washington.edu/news/2023/07/27/how-much-energy-does-chatgpt-use/) at the University of Washington shows that training just one chatbot can consume a year's worth of electricity in a neighborhood. The actual carbon emissions generated behind the scenes are still not transparent today.
 
 We delve into the carbon footprint of Large Language Models (LLMs) across their critical lifecycle stages: training and inference. Utilizing the [Impact framework](https://if.greensoftware.foundation/) tool developed by the [Green Software Foundation](https://greensoftware.foundation/), we provide a detailed methodology for calculating the carbon emissions associated with LLM. We've crafted a series of manifest examples that illustrate the carbon emissions profile throughout the LLM's life cycle, offering a reference for your analysis. Throughout our research, we've compiled a current dataset on the carbon emissions of various LLMs, alongside a digest of relevant public data on carbon emissions metrics, such as Carbon Dioxide Equivalent and Carbon Intensity. Our aim is to equip you with the essential knowledge to approach the training and utilization of LLMs with an environmentally conscious mindset, fostering wise decision-making in the realm of AI.
+
 ## Methodology for estimating LLM carbon emissions
 
-## Basic of Energy and CO2e
+### Basic of Energy and CO2e
 
 - Carbon Dioxide Equivalent (CO2e)
 
@@ -33,7 +34,7 @@ We delve into the carbon footprint of Large Language Models (LLMs) across their 
 
     Carbon emitted Per unit Area (CPA) is used to quantify the embedded carbon of a chip, which depends on various semiconductor manufacturing parameters, including yield, energy consumption per unit area during the manufacturing process, emissions from chemicals used in hardware production, and emissions related to raw material procurement. The specific calculation formula is derived from [Faiz et al., 2023](https://arxiv.org/abs/2309.14393)
 
-## Training CO2e calculation
+### Training CO2e calculation
 
 The total carbon footprint ``CO2eq`` resulting from LLM processing is determined by
 ```
@@ -42,14 +43,14 @@ CO2eq = CO2eq_oper + CO2eq_emb
 where ``CO2eq_oper`` indicates the operational carbon footprint of the LLM,
 and ``CO2eq_emb`` denotes the embodied carbon footprint of the LLM.
 
-## Embodied carbon footprint
+### Embodied carbon footprint
 To quantify the chip’s embodied carbon footprint ``CO2eq_chip`` within a specific hardware unit is calculated by
 ```
 CO2eq_chip = area * CPA
 ```
 where ``area`` represents the chip’s area, ``CPA`` means the carbon emitted per unit area.
 
-## Operational carbon footprint
+### Operational carbon footprint
 The operational carbon footprint ``CO2eq_oper`` attributed to LLM processing is calculated by
 ```
 CO2eq_oper = energy_oper * carb_inten
@@ -57,7 +58,7 @@ CO2eq_oper = energy_oper * carb_inten
 where ``energy_oper`` represents the operational energy for LLM processing, and ``carb_inten`` denotes
 the carbon intensity of the specific data center.
 
-### Operational energy
+#### Operational energy
 The operational energy ``energy_oper`` associated with LLM processing can be calculated by
 ```
 energy_oper = energy_hard * PUE
@@ -65,7 +66,7 @@ energy_oper = energy_hard * PUE
 where ``energy_hard`` denotes the energy used by the computing hardware within a data center, and
 ``PUE`` indicates the PUE of the specific data center.
 
-### Hardware energy
+#### Hardware energy
 The single unit ``i`` energy ``energy_hard_i`` consumed by
 ```
 energy_hard_i = P_i * eff_i * n_i * t_i
@@ -79,7 +80,7 @@ efficiency of hardware unit ``i``;
 Hardware units encompass a range of components, including CPUs, LLM computing devices, memories, SSDs, and others.
 The total energy ``energy_hard`` consumed by all hardware units.
 
-### Training time
+#### Training time
 To calculate hardware energy, it is necessary to have the training time. The training time can be estimated by the following:
 - Total train FLOPs required by the model
 - Benchmark of single GPU FLOPs
@@ -90,11 +91,11 @@ T = C / (n * FLOP_peak * eff)
 where ``C`` represents the computation required to train the transformer model, in total floating point operations, ``FLOP_peak`` represents the device peak throughput, ``eff`` represents efficiency of the device.
 
 
-### Hardware efficiency
+###3 Hardware efficiency
 Efficient processing of LLMs relies on achieving high hardware efficiency, which is calculated as the actual computing throughput divided by the peak throughput.
 The actual computing throughput is calculated as total floating point operations divided by execution time.
 
-#### Hardware efficiency estimation
+##### Hardware efficiency estimation
 If training time is not recorded, throughput is estimated to find total train time and carbon emission. A linear regression using a 2nd order polynomial is fit on the throughput scaling data presented in the paper [Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM](https://arxiv.org/abs/2104.04473).
 The optimal parallelism setting is represented as ``p``,``t``,``d``,``e``, where each variable corresponds to a degree of pipeline, tensor, data, and expert parallelism, respectively.
 The efficiency ``eff_re`` with ``re`` devices can be calculated by
@@ -109,7 +110,7 @@ eff_re = (r_1 * re) / (n * eff_n) + r_2 * re
 and ``n``indicates the number of devices that can achieve ``eff_n``. The number of devices required to achieve optimal hardware efficiency for dense LLM processing is calculated as
 ``n = t ⋅ p ⋅ d``.
 
-### Floating point operations
+#### Floating point operations
 With ``l`` transformer layers, hidden size ``h``, sequence length ``s``, vocabulary size ``V``, and training batch size ``B``,
 a transformer layer consists of an attention block followed by a 2-layer feed-forward network. A 𝐴𝑚×𝑘 × 𝑋𝑘×𝑛 matrix multiplication requires 2𝑚 × 𝑘 × 𝑛 FLOPs (factor of 2 needed to account for multiplies and adds).
 
@@ -128,7 +129,7 @@ C = C_forward + C_backward ≈ 2PD + 4PD ≈ 6PD
 ```
 with parameter size ``P`` and the training dataset size ``D`` (tokens).
 
-### Parameters size
+#### Parameters size
 The number of parameters in a model ``P`` can be computed as:
 ```
 P = 12lh^2 * [1 + 13/12h + (V + s)/(12lh)]
@@ -136,7 +137,7 @@ P = 12lh^2 * [1 + 13/12h + (V + s)/(12lh)]
 where number of layers ``l``, hidden size ``h``, vocabulary size ``V``, and sequence length ``s``.
 
 
-## Inference CO2e calculation
+### Inference CO2e calculation
 The total carbon footprint calculation of inference is similar to training. Inference involves running the input data through the model's forward pass without performing 
 any backward pass or gradient updates, thus the computation ``C_inference`` is approximated as
 ```
@@ -155,7 +156,40 @@ Here is the video explain how IF works, it can help you better understand the ca
 
 [![impact framework explainer video)](https://github.com/Green-Software-Foundation/hack/assets/11027021/541b9e21-85ab-47ab-8d43-c8e2111408a7)](https://www.youtube.com/watch?v=msk-55owTeM)
 
+With the methodology outlined above for estimating LLM carbon emissions information, we can utilize the Impact Framework to assess the carbon footprint of the LLM. The Impact Framework offers a versatile and expandable framework for evaluating the carbon footprint of diverse computing activities, leveraging a variety of plugins to build upon the manifest.
+
+### Basic Manifest for LLM Carbon Emissions
+
+Based on the basic the total carbon footprint equation `CO2eq = CO2eq_oper + CO2eq_emb`, we can divide the total carbon footprint into two components: `CO2eq_oper`,the operational footprint, and `CO2eq_emb`, the embodied footprint.
+
+#### Basic Operational Footprint Equation and Variables
+The fundamental equation for `CO2eq_oper` is `CO2eq_oper = energy_oper * carb_inten`, where `energy_oper` represents the energy utilized during the operation of the LLM, and `carb_inten` denotes the carbon intensity of the energy consumed. To derive `energy_oper`, the [Watt-hour formula](https://arxiv.org/abs/2111.00364) `energy_oper(Wh) = GPU-num×GPU-h×TDP×PUE` is employed. Hence, acquiring `energy_oper` necessitates knowledge of the total hours for training an LLM (`GPU-num×GPU-h`), the power consumption of the GPU (TDP), and the Power Usage Effectiveness (`PUE`).
+
+The equivalent training carbon footprint depends on:
+- Total Training Time
+- Number of GPUs
+- Thermal Design Power(TDP) of GPUs
+- Power Usage Effectiveness(PUE)
+- Regional carbon equivalent emissions
+
+
+The final equation for operational footprint is:
+
+```
+CO2eq_oper =  GPU-num*GPU-h*(GPU power consumption per GPU) * PUE * carb_inten
+```
+
+#### Basic Embodied Footprint Equation and Variables
+
+#### Dive in Manifest
+
+### Extended Manifest for LLM Carbon Emissions
+
+
 ## Conclusion
 
 In this article, we explore the swift development of Large Language Models (LLMs) and the ongoing discussions surrounding their environmental impact. We detail the process of estimating carbon emissions during the training and inference stages of LLMs, utilizing the Impact framework tool to present a range of manifest examples that offer varying degrees of detailed emission estimates. These methods, alongside the manifest's input variables, enable a comparative analysis of the carbon footprint associated with different LLM configurations, encouraging efforts to minimize emissions. Additionally, we have assembled a comprehensive dataset encompassing the carbon emissions of current LLMs and pertinent public data for emission calculations, designed to streamline the process for users. By accurately quantifying the carbon emissions of LLMs and enhancing our understanding of their energy consumption, we are optimistic that a sustainable future, where AI advancements and environmental conservation are interwoven, is within reach.
 
+
+## Reference
+Carole-Jean Wu, Ramya Raghavendra, Udit Gupta, Bilge Acun, Newsha Ardalani, Kiwan Maeng, Glo- ria Chang, Fiona Aga, Jinshi Huang, Charles Bai, et al. 2022. Sustainable ai: Environmental implica- tions, challenges and opportunities. Proceedings of Machine Learning and Systems, 4:795–813.
