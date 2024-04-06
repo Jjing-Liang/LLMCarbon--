@@ -11,7 +11,7 @@ npm install -g @grnsft/if-plugins
 ```
 
 2. Run the Example Manifest
-Before to build up your owner LLM Carbon manifest, you can run the example manifest to get the breif idea. You can download or copy the manifest yaml file in the [example folder]() as you want.
+Before to build up your owner LLM Carbon manifest, you can run the example manifest to get the breif idea. You can download or copy the manifest yaml file in the [example folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/example) as you want.
 
 The `llm-oprational-carbon.yml` is the example manifest for calculate the oprational carbon footprint of LLM, which includes [the data from LLaMA](https://arxiv.org/abs/2302.13971).
 You can use the IF Framework command to run the manifest:
@@ -47,12 +47,12 @@ tree:
 ```
 The operation carbon is 13852268.953600002 kgCO2
 
-The other files in example folder use the [GPT-3 data](https://arxiv.org/abs/2005.14165) and they are:
+The other files in [example folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/example) use the [GPT-3 data](https://arxiv.org/abs/2005.14165) and they are:
 `llm-carbon-basic.yml`: use the basic formula to calculat oprational carbon and embodied carbon.
 `llm-carbon-with-estimated-training-time1.yml` and `llm-carbon-with-estimated-training-time2.yml`: use the formula with estimated LLM training hours to calculat oprational carbon and embodied carbon.
 
 3. Cumpute with customized manifest file
-According to your requirements, you can utilize the manifest template files located in the manifest folder to compute LLM training carbon emissions.
+According to your requirements, you can utilize the manifest template files located in the [manifest folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/manifest) to compute LLM training carbon emissions.
 The files `llm-carbon-basic.yml`, `llm-oprtaional-carbon.yml`, `llm-embodied-carbon.yml`, and `llm-embodied-carbon-using-scim.yml` contain sample input data.
 
 If you lack precise LLM training times but possess detailed LLM model data, such as model parameter numbers and token counts, you can calculate LLM training carbon emissions using estimated training times with the files `llm-carbon-with-estimated-training-time1&2.yml`, `llm-oprtaional-carbon-with-estimated-training-time1&2.yml`, and `llm-embodied-carbon-with-estimated-training-time1&2.yml`.
@@ -74,7 +74,7 @@ This is expressed by the formula: `CO2eq_emb = sum(CO2eq_emb_i)`, where `CO2eq_e
 
 Based on the provided formula, the LLM `CO2eq` can be computed using the IF Framework through the IF official plugin.
 
-Here is a basic manifest(you can find it in the repo's examples folder):
+Here is a basic manifest(you can find it in the repo's [examples folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/example)):
 ```yaml
 # llm-carbon-basic.yml
 name: llm basic operational emissions manifest
@@ -275,7 +275,7 @@ Basically, the operational emissions of an LLM model combines the training emiss
 
 For the computation required for training, we can use the formula `C_train ≈ 6PD` with parameter size `P` and the training dataset size `D` (tokens). For the computation required for inference, we can use the formula `C_inference ≈ 2P * D_inference`, where `D_inference` means inference dataset size (tokens).
 
-You can find the manifest file in the repo's example directory as `llm-carbon-with-estimated-training-time1.yml` and `llm-carbon-with-estimated-training-time2.yml`. 
+You can find the manifest file in the repo's [example folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/example) as `llm-carbon-with-estimated-training-time1.yml` and `llm-carbon-with-estimated-training-time2.yml`. 
 
 
 
