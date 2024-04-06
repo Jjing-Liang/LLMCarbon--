@@ -191,6 +191,9 @@ To derive `energy_oper`, the [Watt-hour formula](https://arxiv.org/abs/2111.0036
 The final equation for operational footprint is:` CO2eq_oper =  n * T * TDP * PUE * carb_inten`
 
 #### Basic Embodied Footprint Equation and Variables
+From the information provided, we observe that the embodied emissions for each hardware unit are calculated using the formula: `CO2eq_emb_i = (t_i * CO2eq_chip_i) / lifetime_i`, where `t_i` represents the execution duration of the hardware unit, which equates to the total time required for training an LLM. `CO2eq_chip_i` denotes the CO2 emissions per chip, and `lifetime_i` indicates the expected lifespan of the hardware unit. The chip’s embodied carbon footprint `CO2eq_chip_i` within a specific hardware unit is calculated by `CO2eq_chip_i = area_i * CPA_i`.
+
+The total embodied emissions for training an LLM, denoted as `CO2eq_emb`, are computed as the sum of `CO2eq_emb_i` values for each hardware unit involved in the process. This is expressed by the formula: `CO2eq_emb = sum(CO2eq_emb_i)`, where `CO2eq_emb_i` represents the embodied emissions of each respective hardware unit. In essence, the hardware units encompass GPU, CPU, SSD, and DRAM. Thus, the aggregate embodied emissions for training an LLM can be articulated as: `CO2eq_emb = sum(CO2eq_emb_GPU, CO2eq_emb_CPU, CO2eq_emb_SSD, CO2eq_emb_DRAM)`.
 
 #### Dive in Manifest
 The manifest for LLM carbon emissions includes the following components:
@@ -359,7 +362,7 @@ Sometimes we want to estimate an existing LLM model's Emissions and find that we
 #### Estimate the operational emissions
 Basically, the operational emissions of an LLM model combines the training emissions and the inference emissions.
 
-To get the operational emissions, we need to estimate the training hours and the inference hours based on the equation `T = C / ( n * FLOP_peak * eff)`. Where `C` represents the computation required, in total floating point operations, `FLOP_peak` represents the device peak throughput, `eff` represents efficiency of the device.
+To get the operational emissions, we need to estimate the training hours and the inference hours based on the equation `T = C / ( n * FLOP_peak * eff)`. Where `C` represents the computation required, in total floating point operations, `FLOP_peak` represents the device peak throughput, `eff` represents efficiency of the device. 
 
 For the computation required for training, we can use the formula `C_train ≈ 6PD` with parameter size `P` and the training dataset size `D` (tokens). For the computation required for inference, we can use the formula `C_inference ≈ 2P * D_inference`, where `D_inference` means inference dataset size (tokens).
 
