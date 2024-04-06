@@ -1,0 +1,292 @@
+name: llm emissions manifest with estimated training time
+description: >2-
+   GTP-3 data resource: https://arxiv.org/abs/2005.14165
+  CO2eq_emb = sum(CO2eq_emb_GPU, CO2eq_emb_CPU, CO2eq_emb_SSD, CO2eq_emb_DRAM)
+  CO2eq_emb_i = (t_i * area_i * CPA_i) / lifetime_i
+
+  CO2eq_oper =  n * T_estimated * TDP * PUE * carb_inten T_estimated = C / ( n *
+  X) C = C_train + C_inference C_train ≈ 6PD C_inference ≈ 2P * D_inference
+
+  C: total compute cost C_train: training total compute C_inference: inference
+  total compute
+
+  n: number of gpus(gpu/num) P: number of parameters(modal/parameters-count) D:
+  number of tokens(modal/tokens-count) D_inference: number of inference
+  tokens(modal/tokens-count) X: estimated computing
+  throughput(modal/estimated-throughput) TDP: power consumption of the
+  GPU(gpu/tdp) PUE: Power Usage Effectiveness(pue) carb_inten: carbon intensity
+  of the energy consumed(carb_inten) 
+tags: null
+initialize:
+  plugins:
+    estimate-total-compute-multiply:
+      path: '@grnsft/if-plugins'
+      method: Multiply
+      global-config:
+        input-parameters:
+          - flop-count-factor
+          - modal/parameters-count
+          - modal/tokens-count
+        output-parameter: estimate-total-compute
+    estimate-compute-per-second-multiply:
+      path: '@grnsft/if-plugins'
+      method: Multiply
+      global-config:
+        input-parameters:
+          - gpu/num
+          - modal/estimated-throughput
+        output-parameter: estimate-compute-per-second
+    estimate-time-divide:
+      path: '@grnsft/if-plugins'
+      method: Divide
+      global-config:
+        numerator: estimate-total-compute
+        denominator: estimate-compute-per-second
+        output: estimate-time-second
+    estimate-operation-hour-divide:
+      path: '@grnsft/if-plugins'
+      method: Divide
+      global-config:
+        numerator: estimate-time-second
+        denominator: seconds-per-hour
+        output: estimate-operation-hour
+    operation-carbon-multiply:
+      path: '@grnsft/if-plugins'
+      method: Multiply
+      global-config:
+        input-parameters:
+          - gpu/num
+          - estimate-operation-hour
+          - gpu/tdp
+          - pue
+          - carb_inten
+        output-parameter: operation-carbon
+    device-expected-lifespan-hours-per-year-multiply:
+      path: '@grnsft/if-plugins'
+      method: Multiply
+      global-config:
+        input-parameters:
+          - expected-lifespan
+          - days-per-year
+          - hours-per-day
+        output-parameter: expected-lifespan-duration
+    reserved-device-hour-with-device-expected-lifespan-divide:
+      path: '@grnsft/if-plugins'
+      method: Divide
+      global-config:
+        numerator: estimate-operation-hour
+        denominator: expected-lifespan-duration
+        output: expected-lifespan-rate
+    gpu-embodied-carbon-multiply:
+      path: '@grnsft/if-plugins'
+      method: Multiply
+      global-config:
+        input-parameters:
+          - gpu/num
+          - expected-lifespan-rate
+          - gpu/cap
+          - gpu/area
+        output-parameter: gpu-carbon-embodied
+    cpu-embodied-carbon-multiply:
+      path: '@grnsft/if-plugins'
+      method: Multiply
+      global-config:
+        input-parameters:
+          - hardware-unit-num
+          - expected-lifespan-rate
+          - cpu/cap
+          - cpu/area
+        output-parameter: cpu-carbon-embodied
+    ssd-embodied-carbon-multiply:
+      path: '@grnsft/if-plugins'
+      method: Multiply
+      global-config:
+        input-parameters:
+          - hardware-unit-num
+          - expected-lifespan-rate
+          - ssd/cap
+          - ssd/area
+        output-parameter: ssd-carbon-embodied
+    dram-embodied-carbon-multiply:
+      path: '@grnsft/if-plugins'
+      method: Multiply
+      global-config:
+        input-parameters:
+          - hardware-unit-num
+          - expected-lifespan-rate
+          - dram/cap
+          - dram/area
+        output-parameter: dram-carbon-embodied
+    embodied-carbon-sum:
+      path: '@grnsft/if-plugins'
+      method: Sum
+      global-config:
+        input-parameters:
+          - gpu-carbon-embodied
+          - cpu-carbon-embodied
+          - ssd-carbon-embodied
+          - dram-carbon-embodied
+        output-parameter: carbon-embodied
+    llm-carbon-sum:
+      path: '@grnsft/if-plugins'
+      method: Sum
+      global-config:
+        input-parameters:
+          - carbon-embodied
+          - operation-carbon
+        output-parameter: total-carbon
+  outputs:
+    - yaml
+if-version: v0.3.1
+tree:
+  children:
+    training-carbon:
+      pipeline:
+        - estimate-total-compute-multiply
+        - estimate-compute-per-second-multiply
+        - estimate-time-divide
+        - estimate-operation-hour-divide
+        - operation-carbon-multiply
+        - device-expected-lifespan-hours-per-year-multiply
+        - reserved-device-hour-with-device-expected-lifespan-divide
+        - gpu-embodied-carbon-multiply
+        - cpu-embodied-carbon-multiply
+        - ssd-embodied-carbon-multiply
+        - dram-embodied-carbon-multiply
+        - embodied-carbon-sum
+        - llm-carbon-sum
+      defaults:
+        flop-count-factor: 6
+        thousands-per-unit: 0.001
+        days-per-year: 365
+        hours-per-day: 24
+        seconds-per-hour: 3600
+        expected-lifespan: 5
+      inputs:
+        - gpu/num: 10000
+          gpu/tdp: 0.3
+          modal/estimated-throughput: 134.54612901479513
+          modal/parameters-count: 175000000000
+          modal/tokens-count: 400000000000
+          pue: 1.1
+          carb_inten: 0.429
+          gpu/cap: 1.2
+          gpu/area: 8.15
+          cpu/cap: 1
+          cpu/area: 1.47
+          ssd/cap: 0.024
+          ssd/area: 32768
+          dram/cap: 0.4
+          dram/area: 256
+          hardware-unit-num: 1250
+      outputs:
+        - gpu/num: 10000
+          gpu/tdp: 0.3
+          modal/estimated-throughput: 134.54612901479513
+          modal/parameters-count: 175000000000
+          modal/tokens-count: 400000000000
+          pue: 1.1
+          carb_inten: 0.429
+          gpu/cap: 1.2
+          gpu/area: 8.15
+          cpu/cap: 1
+          cpu/area: 1.47
+          ssd/cap: 0.024
+          ssd/area: 32768
+          dram/cap: 0.4
+          dram/area: 256
+          hardware-unit-num: 1250
+          flop-count-factor: 6
+          thousands-per-unit: 0.001
+          days-per-year: 365
+          hours-per-day: 24
+          seconds-per-hour: 3600
+          expected-lifespan: 5
+          estimate-total-compute: 4.2e+23
+          estimate-compute-per-second: 1345461.2901479513
+          estimate-time-second: 312160597317382100
+          estimate-operation-hour: 86711277032606.14
+          operation-carbon: 122757154895060530
+          expected-lifespan-duration: 43800
+          expected-lifespan-rate: 1979709521.2923777
+          gpu-carbon-embodied: 193615591182394.53
+          cpu-carbon-embodied: 3637716245374.744
+          ssd-carbon-embodied: 1946133647811259
+          dram-carbon-embodied: 253402818725424.38
+          carbon-embodied: 2396789773964452.5
+          total-carbon: 125153944669024980
+    inference-carbon:
+      pipeline:
+        - estimate-total-compute-multiply
+        - estimate-compute-per-second-multiply
+        - estimate-time-divide
+        - estimate-operation-hour-divide
+        - operation-carbon-multiply
+        - device-expected-lifespan-hours-per-year-multiply
+        - reserved-device-hour-with-device-expected-lifespan-divide
+        - gpu-embodied-carbon-multiply
+        - cpu-embodied-carbon-multiply
+        - ssd-embodied-carbon-multiply
+        - dram-embodied-carbon-multiply
+        - embodied-carbon-sum
+        - llm-carbon-sum
+      defaults:
+        flop-count-factor: 2
+        thousands-per-unit: 0.001
+        days-per-year: 365
+        hours-per-day: 24
+        seconds-per-hour: 3600
+        expected-lifespan: 5
+      inputs:
+        - gpu/num: 16
+          gpu/tdp: 0.4
+          modal/parameters-count: 175000000000
+          modal/tokens-count: 32
+          modal/estimated-throughput: 133.95473529503445
+          pue: 1.1
+          carb_inten: 0.429
+          gpu/cap: 1.2
+          gpu/area: 8.15
+          cpu/cap: 1
+          cpu/area: 1.47
+          ssd/cap: 0.024
+          ssd/area: 32768
+          dram/cap: 0.4
+          dram/area: 256
+          hardware-unit-num: 2
+      outputs:
+        - gpu/num: 16
+          gpu/tdp: 0.4
+          modal/parameters-count: 175000000000
+          modal/tokens-count: 32
+          modal/estimated-throughput: 133.95473529503445
+          pue: 1.1
+          carb_inten: 0.429
+          gpu/cap: 1.2
+          gpu/area: 8.15
+          cpu/cap: 1
+          cpu/area: 1.47
+          ssd/cap: 0.024
+          ssd/area: 32768
+          dram/cap: 0.4
+          dram/area: 256
+          hardware-unit-num: 2
+          flop-count-factor: 2
+          thousands-per-unit: 0.001
+          days-per-year: 365
+          hours-per-day: 24
+          seconds-per-hour: 3600
+          expected-lifespan: 5
+          estimate-total-compute: 11200000000000
+          estimate-compute-per-second: 2143.2757647205513
+          estimate-time-second: 5225645800.861422
+          estimate-operation-hour: 1451568.2780170615
+          operation-carbon: 4383968.450536009
+          expected-lifespan-duration: 43800
+          expected-lifespan-rate: 33.140828265229715
+          gpu-carbon-embodied: 5185.876806943145
+          cpu-carbon-embodied: 97.43403509977536
+          ssd-carbon-embodied: 52126.01570856227
+          dram-carbon-embodied: 6787.241628719046
+          carbon-embodied: 64196.56817932424
+          total-carbon: 4448165.018715333

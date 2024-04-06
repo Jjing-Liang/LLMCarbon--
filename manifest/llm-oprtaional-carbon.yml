@@ -1,0 +1,35 @@
+name: llm basic operational emissions manifest
+description:
+  "
+  CO2eq_oper =  n * T * TDP * PUE * carb_inten
+  
+  T: training hour(training_hour)
+  n: number of gpus(gpu/num)
+  TDP: power consumption of the GPU(gpu/tdp)
+  PUE: Power Usage Effectiveness(pue)
+  carb_inten: carbon intensity of the energy consumed(carb_inten)
+  "
+tags:
+initialize:
+  outputs:
+    - yaml
+  plugins:
+    training-operation-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['gpu/num', 'training_hour', 'gpu/tdp', 'pue', 'carb_inten']
+        output-parameter: 'operation-carbon'
+tree:
+  children:
+    child:
+      pipeline:
+        - training-operation-carbon-multiply
+      inputs:
+        - gpu/num: # the number of GPUs used for training LLM
+          training_hour: # the total training hours includes training and inference
+          gpu/tdp:  # kWh
+          # the power consumption per GPU per hour
+          pue:
+          carb_inten: # CO2eq/KWh
+          # the carbon intensity of training region

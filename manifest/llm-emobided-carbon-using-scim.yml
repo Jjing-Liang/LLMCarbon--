@@ -1,0 +1,24 @@
+name: sci-m example
+description: calculate the embodied emissions for the hardware unit
+tags:
+initialize:
+  outputs:
+    - yaml
+  plugins:
+    sci-m:
+      method: SciM
+      path: '@grnsft/if-plugins'
+tree:
+  children:
+    child:
+      pipeline:
+        - sci-m
+      defaults:
+        device/emissions-embodied:  # gCO2eq CO2eq_chip_i
+        device/expected-lifespan:  # years in seconds
+        resources-reserved:
+        resources-total:
+      inputs:
+        - timestamp:
+          duration: # seconds
+          # the execution duration of the hardware unit

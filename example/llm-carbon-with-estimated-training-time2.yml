@@ -1,0 +1,193 @@
+name: llm emissions manifest with estimated training time
+description:
+  "
+  GTP-3 data resource: https://arxiv.org/abs/2005.14165
+  
+  CO2eq_emb = sum(CO2eq_emb_GPU, CO2eq_emb_CPU, CO2eq_emb_SSD, CO2eq_emb_DRAM)
+  CO2eq_emb_i = (t_i * area_i * CPA_i) / lifetime_i
+  
+  CO2eq_oper =  n * T_estimated * TDP * PUE * carb_inten
+  T_estimated = C / ( n * X)
+  C = C_train + C_inference
+  C_train ≈ 6PD
+  C_inference ≈ 2P * D_inference
+
+  C: total compute cost
+  C_train: training total compute
+  C_inference: inference total compute
+
+  n: number of gpus(gpu/num)
+  P: number of parameters(modal/parameters-count)
+  D: number of tokens(modal/tokens-count)
+  D_inference: number of inference tokens(modal/tokens-count)
+  X: estimated computing throughput(modal/estimated-throughput)
+  TDP: power consumption of the GPU(gpu/tdp)
+  PUE: Power Usage Effectiveness(pue)
+  carb_inten: carbon intensity of the energy consumed(carb_inten)
+  "
+tags:
+initialize:
+  outputs:
+    - yaml
+  plugins:
+    estimate-total-compute-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['flop-count-factor', 'modal/parameters-count', 'modal/tokens-count' ]
+        output-parameter: 'estimate-total-compute'
+    estimate-compute-per-second-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['gpu/num', 'modal/estimated-throughput']
+        output-parameter: 'estimate-compute-per-second'
+    estimate-time-divide:
+      method: Divide
+      path: '@grnsft/if-plugins'
+      global-config:
+        numerator: 'estimate-total-compute'
+        denominator: 'estimate-compute-per-second'
+        output: 'estimate-time-second'
+    estimate-operation-hour-divide:
+      method: Divide
+      path: '@grnsft/if-plugins'
+      global-config:
+        numerator: 'estimate-time-second'
+        denominator: 'seconds-per-hour'
+        output: 'estimate-operation-hour'
+    operation-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['gpu/num', 'estimate-operation-hour', 'gpu/tdp', 'pue', 'carb_inten']
+        output-parameter: 'operation-carbon'
+    device-expected-lifespan-hours-per-year-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['expected-lifespan', 'days-per-year', 'hours-per-day']
+        output-parameter: 'expected-lifespan-duration'
+    reserved-device-hour-with-device-expected-lifespan-divide:
+      method: Divide
+      path: '@grnsft/if-plugins'
+      global-config:
+        numerator: 'estimate-operation-hour'
+        denominator: 'expected-lifespan-duration'
+        output: 'expected-lifespan-rate'
+    gpu-embodied-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['gpu/num', 'expected-lifespan-rate','gpu/cap', 'gpu/area']
+        output-parameter: 'gpu-carbon-embodied'
+    cpu-embodied-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['hardware-unit-num', 'expected-lifespan-rate','cpu/cap', 'cpu/area']
+        output-parameter: 'cpu-carbon-embodied'
+    ssd-embodied-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['hardware-unit-num', 'expected-lifespan-rate', 'ssd/cap', 'ssd/area']
+        output-parameter: 'ssd-carbon-embodied'
+    dram-embodied-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['hardware-unit-num', 'expected-lifespan-rate', 'dram/cap', 'dram/area']
+        output-parameter: 'dram-carbon-embodied'
+    embodied-carbon-sum:
+      method: Sum
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: [ 'gpu-carbon-embodied', 'cpu-carbon-embodied', 'ssd-carbon-embodied', 'dram-carbon-embodied' ]
+        output-parameter: 'carbon-embodied'
+    llm-carbon-sum:
+      method: Sum
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: [ 'carbon-embodied',  'operation-carbon']
+        output-parameter: 'total-carbon'
+tree:
+  children:
+    training-carbon:
+      pipeline:
+        - estimate-total-compute-multiply
+        - estimate-compute-per-second-multiply
+        - estimate-time-divide
+        - estimate-operation-hour-divide
+        - operation-carbon-multiply
+        - device-expected-lifespan-hours-per-year-multiply
+        - reserved-device-hour-with-device-expected-lifespan-divide
+        - gpu-embodied-carbon-multiply
+        - cpu-embodied-carbon-multiply
+        - ssd-embodied-carbon-multiply
+        - dram-embodied-carbon-multiply
+        - embodied-carbon-sum
+        - llm-carbon-sum
+      defaults:
+        flop-count-factor: 6 #  C_train ≈ 6PD
+        thousands-per-unit: 0.001
+        days-per-year: 365
+        hours-per-day: 24
+        seconds-per-hour: 3600
+        expected-lifespan: 5 # 5 years in seconds.
+      inputs:
+        - gpu/num: 10000 # the number of GPUs used for training LLM
+          gpu/tdp: 0.3 # use V100 for training
+          modal/estimated-throughput: 134.54612901479513 # use V100 for training
+          modal/parameters-count: 175000000000
+          modal/tokens-count: 400000000000
+          pue: 1.1
+          carb_inten: 0.429 # CO2eq/KWh the carbon intensity of training region
+          gpu/cap: 1.2    # kgC02/cm2
+          gpu/area: 8.15  # cm2
+          cpu/cap: 1      # kgC02/cm2
+          cpu/area: 1.47  # cm2
+          ssd/cap: 0.024  # kgC02/GB
+          ssd/area: 32768 # GB 32TB
+          dram/cap: 0.4   # kgC02/GB
+          dram/area: 256  # GB
+          hardware-unit-num: 1250 # gpu_num / 8  assuming one CPU, SSD, DRAM for every 8 GPU/TPU chip or one server stack
+    inference-carbon:
+      pipeline:
+        - estimate-total-compute-multiply
+        - estimate-compute-per-second-multiply
+        - estimate-time-divide
+        - estimate-operation-hour-divide
+        - operation-carbon-multiply
+        - device-expected-lifespan-hours-per-year-multiply
+        - reserved-device-hour-with-device-expected-lifespan-divide
+        - gpu-embodied-carbon-multiply
+        - cpu-embodied-carbon-multiply
+        - ssd-embodied-carbon-multiply
+        - dram-embodied-carbon-multiply
+        - embodied-carbon-sum
+        - llm-carbon-sum
+      defaults:
+        flop-count-factor: 2 # C_inference ≈ 2P * D_inference
+        thousands-per-unit: 0.001
+        days-per-year: 365
+        hours-per-day: 24
+        seconds-per-hour: 3600
+        expected-lifespan: 5 # 5 years in seconds.
+      inputs:
+        - gpu/num: 16 # the number of GPUs used for inference LLM
+          gpu/tdp: 0.4 # A100 for inference
+          modal/parameters-count: 175000000000
+          modal/tokens-count: 32
+          modal/estimated-throughput: 133.95473529503445 # A100 for inference
+          pue: 1.1
+          carb_inten: 0.429 # CO2eq/KWh the carbon intensity of training region
+          gpu/cap: 1.2    # kgC02/cm2
+          gpu/area: 8.15  # cm2
+          cpu/cap: 1      # kgC02/cm2
+          cpu/area: 1.47  # cm2
+          ssd/cap: 0.024  # kgC02/GB
+          ssd/area: 32768 # GB 32TB
+          dram/cap: 0.4   # kgC02/GB
+          dram/area: 256  # GB
+          hardware-unit-num: 2 # gpu_num / 8  assuming one CPU, SSD, DRAM for every 8 GPU/TPU chip or one server stack

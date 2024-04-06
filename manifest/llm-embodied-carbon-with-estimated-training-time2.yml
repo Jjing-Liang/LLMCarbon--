@@ -1,0 +1,176 @@
+name: llm embodied emissions manifest with estimated training time
+description:
+  " 
+  CO2eq_emb = sum(CO2eq_emb_GPU, CO2eq_emb_CPU, CO2eq_emb_SSD, CO2eq_emb_DRAM)
+  CO2eq_emb_i = (t_estimated * area_i * CPA_i) / lifetime_i
+
+  t_estimated = C / ( n * X) or t_estimated = C / ( n * FLOP_peak * eff)
+  for this manifest, we use t_estimated = C / ( n * X)
+  
+  C = C_train + C_inference
+  C_train ≈ 6PD
+  C_inference ≈ 2P * D_inference
+
+  C: total compute cost
+  C_train: training total compute
+  C_inference: inference total compute
+
+  n: number of gpus(gpu/num)
+  P: number of parameters(modal/parameters-count)
+  D: number of tokens(modal/tokens-count)
+  D_inference: number of inference tokens(modal/inference-tokens-count)
+  X: estimated computing throughput(modal/estimated-throughput)
+  "
+tags:
+initialize:
+  outputs:
+    - yaml
+  plugins:
+    estimate-total-compute-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['flop-count-factor', 'modal/parameters-count', 'modal/tokens-count' ]
+        output-parameter: 'estimate-total-compute'
+    estimate-compute-per-second-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['gpu/num', 'modal/estimated-throughput']
+        output-parameter: 'estimate-compute-per-second'
+    estimate-training-time-divide:
+      method: Divide
+      path: '@grnsft/if-plugins'
+      global-config:
+        numerator: 'estimate-total-compute'
+        denominator: 'estimate-compute-per-second'
+        output: 'estimate-time-second'
+    estimate-operation-hour-divide:
+      method: Divide
+      path: '@grnsft/if-plugins'
+      global-config:
+        numerator: 'estimate-time-second'
+        denominator: 'seconds-per-hour'
+        output: 'estimate-operation-hour'
+    device-expected-lifespan-hours-per-year-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['expected-lifespan', 'days-per-year', 'hours-per-day']
+        output-parameter: 'expected-lifespan-duration'
+    reserved-device-hour-with-device-expected-lifespan-divide:
+      method: Divide
+      path: '@grnsft/if-plugins'
+      global-config:
+        numerator: 'estimate-operation-hour'
+        denominator: 'expected-lifespan-duration'
+        output: 'expected-lifespan-rate'
+    gpu-embodied-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['gpu/num', 'expected-lifespan-rate','gpu/cap', 'gpu/area']
+        output-parameter: 'gpu-carbon-embodied'
+    cpu-embodied-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['hardware-unit-num', 'expected-lifespan-rate','cpu/cap', 'cpu/area']
+        output-parameter: 'cpu-carbon-embodied'
+    ssd-embodied-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['hardware-unit-num', 'expected-lifespan-rate', 'ssd/cap', 'ssd/area']
+        output-parameter: 'ssd-carbon-embodied'
+    dram-embodied-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['hardware-unit-num', 'expected-lifespan-rate', 'dram/cap', 'dram/area']
+        output-parameter: 'dram-carbon-embodied'
+    embodied-carbon-sum:
+      method: Sum
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: [ 'gpu-carbon-embodied', 'cpu-carbon-embodied', 'ssd-carbon-embodied', 'dram-carbon-embodied' ]
+        output-parameter: 'carbon-embodied'
+
+tree:
+  children:
+    training-carbon:
+      pipeline:
+        - estimate-total-compute-multiply
+        - estimate-compute-per-second-multiply
+        - estimate-time-divide
+        - estimate-operation-hour-divide
+        - operation-carbon-multiply
+        - device-expected-lifespan-hours-per-year-multiply
+        - reserved-device-hour-with-device-expected-lifespan-divide
+        - gpu-embodied-carbon-multiply
+        - cpu-embodied-carbon-multiply
+        - ssd-embodied-carbon-multiply
+        - dram-embodied-carbon-multiply
+        - embodied-carbon-sum
+      defaults:
+        flop-count-factor: 6 # C_train ≈ 6PD
+        thousands-per-unit: 0.001
+        days-per-year: 365
+        hours-per-day: 24
+        seconds-per-hour: 3600
+        expected-lifespan: 5 # 5 years in seconds.
+        # Meta’s data centers achieve an average utilization rate of 60% throughout the 5-year lifespan of hardware units
+        # ref: Carole-Jean Wu, Ramya Raghavendra, Udit Gupta, Bilge Acun, Newsha Ardalani, Kiwan Maeng, Gloria Chang, Fiona Aga, Jinshi Huang, Charles Bai, et al. Sustainable ai: Environmental implications, challenges and opportunities. Proceedings of Machine Learning and Systems, 4:795–813, 2022.
+      inputs:
+        - gpu/num:
+          gpu/cap:       # kgC02/cm2
+          gpu/area:      # cm2
+          cpu/cap:       # kgC02/cm2
+          cpu/area:      # cm2
+          ssd/area:      # GB
+          dram/cap:      # kgC02/GB
+          dram/area:     # GB
+          hardware-unit-num:
+          # assuming one CPU, SSD, DRAM for every 8 GPU/TPU chip or one server stack
+          # gpu/num / 8
+          modal/parameters-count:
+          modal/tokens-count:
+          modal/estimated-throughput:  # X tokens/s
+    inference-carbon:
+      pipeline:
+        - estimate-total-compute-multiply
+        - estimate-compute-per-second-multiply
+        - estimate-time-divide
+        - estimate-operation-hour-divide
+        - operation-carbon-multiply
+        - device-expected-lifespan-hours-per-year-multiply
+        - reserved-device-hour-with-device-expected-lifespan-divide
+        - gpu-embodied-carbon-multiply
+        - cpu-embodied-carbon-multiply
+        - ssd-embodied-carbon-multiply
+        - dram-embodied-carbon-multiply
+        - embodied-carbon-sum
+      defaults:
+        flop-count-factor: 2 # C_inference ≈ 2P * D_inference
+        thousands-per-unit: 0.001
+        days-per-year: 365
+        hours-per-day: 24
+        seconds-per-hour: 3600
+        expected-lifespan: 5 # 5 years in seconds.
+        # Meta’s data centers achieve an average utilization rate of 60% throughout the 5-year lifespan of hardware units
+        # ref: Carole-Jean Wu, Ramya Raghavendra, Udit Gupta, Bilge Acun, Newsha Ardalani, Kiwan Maeng, Gloria Chang, Fiona Aga, Jinshi Huang, Charles Bai, et al. Sustainable ai: Environmental implications, challenges and opportunities. Proceedings of Machine Learning and Systems, 4:795–813, 2022.
+      inputs:
+        - gpu/num:
+          gpu/cap:       # kgC02/cm2
+          gpu/area:      # cm2
+          cpu/cap:       # kgC02/cm2
+          cpu/area:      # cm2
+          ssd/area:      # GB
+          dram/cap:      # kgC02/GB
+          dram/area:     # GB
+          hardware-unit-num:
+          # assuming one CPU, SSD, DRAM for every 8 GPU/TPU chip or one server stack
+          # gpu/num / 8
+          modal/parameters-count:
+          modal/tokens-count:
+          modal/estimated-throughput:  # X tokens/s

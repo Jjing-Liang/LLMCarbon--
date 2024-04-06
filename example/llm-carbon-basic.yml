@@ -1,6 +1,8 @@
-name: llm basic emissions manifest
+name: llm basic operational emissions manifest
 description:
   "
+  GTP-3 data resource: https://arxiv.org/abs/2005.14165
+  
   CO2eq_oper =  n * T * TDP * PUE * carb_inten
   CO2eq_emb = sum(CO2eq_emb_GPU, CO2eq_emb_CPU, CO2eq_emb_SSD, CO2eq_emb_DRAM)
   CO2eq_emb_i = (t_i * area_i * CPA_i) / lifetime_i
@@ -45,19 +47,19 @@ initialize:
       method: Multiply
       path: '@grnsft/if-plugins'
       global-config:
-        input-parameters: ['cpu/num', 'expected-lifespan-rate','cpu/cap', 'cpu/area']
+        input-parameters: ['hardware-unit-num', 'expected-lifespan-rate','cpu/cap', 'cpu/area']
         output-parameter: 'cpu-carbon-embodied'
     ssd-embodied-carbon-multiply:
       method: Multiply
       path: '@grnsft/if-plugins'
       global-config:
-        input-parameters: ['ssd/num', 'expected-lifespan-rate', 'ssd/cap', 'ssd/area']
+        input-parameters: ['hardware-unit-num', 'expected-lifespan-rate', 'ssd/cap', 'ssd/area']
         output-parameter: 'ssd-carbon-embodied'
     dram-embodied-carbon-multiply:
       method: Multiply
       path: '@grnsft/if-plugins'
       global-config:
-        input-parameters: ['dram/num', 'expected-lifespan-rate', 'dram/cap', 'dram/area']
+        input-parameters: ['hardware-unit-num', 'expected-lifespan-rate', 'dram/cap', 'dram/area']
         output-parameter: 'dram-carbon-embodied'
     embodied-carbon-sum:
       method: Sum
@@ -90,21 +92,20 @@ tree:
         days-per-year: 365
         hours-per-day: 24
         seconds-per-hour: 3600
-        expected-lifespan:  # year
+        expected-lifespan: 5
       inputs:
-        - gpu/num: # the number of GPUs used for training LLM
-          training_hour: # the total training hours includes training and inference
-          gpu/tdp:  # kWh  the power consumption per GPU per hour
-          pue:
-          carb_inten: # CO2eq/KWh the carbon intensity of training region
-          gpu/cap:       # kgC02/cm2
-          gpu/area:      # cm2
-          cpu/num:
-          cpu/cap:       # kgC02/cm2
-          cpu/area:      # cm2
-          ssd/num:
-          ssd/cap:       # kgC02/GB
-          ssd/area:      # GB
-          dram/num:
-          dram/cap:      # kgC02/GB
-          dram/area:     # GB
+        - gpu/num: 10000
+          training_hour: 355.2 # 14.8 days
+          gpu/tdp: 0.3 # 300 Watts
+          pue: 1.1
+          carb_inten: 0.429 # CO2eq/KWh the carbon intensity of training region
+          gpu/cap: 1.2    # kgC02/cm2
+          gpu/area: 8.15  # cm2
+          cpu/cap: 1      # kgC02/cm2
+          cpu/area: 1.47  # cm2
+          ssd/cap: 0.024  # kgC02/GB
+          ssd/area: 32768 # GB 32TB
+          dram/cap: 0.4   # kgC02/GB
+          dram/area: 256  # GB
+          hardware-unit-num:  1250 # gpu_num / 8  assuming one CPU, SSD, DRAM for every 8 GPU/TPU chip or one server stack
+

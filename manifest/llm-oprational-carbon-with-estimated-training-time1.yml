@@ -1,0 +1,110 @@
+name: llm operational emissions manifest with estimated training time
+description:
+  "
+  CO2eq_oper =  n * T_estimated * TDP * PUE * carb_inten
+  T_estimated = C / ( n * FLOP_peak * eff)
+  C = C_train + C_inference
+  C_train ≈ 6PD
+  C_inference ≈ 2P * D_inference
+
+  C: total compute cost
+  C_train: training total compute
+  C_inference: inference total compute
+  FLOP_peak: peak flops(gpu/flop_peak)
+  eff: hardware efficiency(hardware-efficiency)
+  n: number of gpus(gpu/num)
+  P: number of parameters(modal/parameters-count)
+  D: number of tokens(modal/tokens-count)
+  D_inference: number of inference tokens(modal/tokens-count)
+  TDP: power consumption of the GPU(gpu/tdp)
+  PUE: Power Usage Effectiveness(pue)
+  carb_inten: carbon intensity of the energy consumed(carb_inten)
+  "
+tags:
+initialize:
+  outputs:
+    - yaml
+  plugins:
+    estimate-total-compute-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['flop-count-factor', 'modal/parameters-count', 'modal/tokens-count' ]
+        output-parameter: 'estimate-total-compute'
+    estimate-compute-per-second-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['gpu/num', 'gpu/flop_peak', 'hardware-efficiency']
+        output-parameter: 'estimate-compute-per-second'
+    estimate-time-divide:
+      method: Divide
+      path: '@grnsft/if-plugins'
+      global-config:
+        numerator: 'estimate-total-compute'
+        denominator: 'estimate-compute-per-second'
+        output: 'estimate-operation-second'
+    estimate-operation-hour-divide:
+      method: Divide
+      path: '@grnsft/if-plugins'
+      global-config:
+        numerator: 'estimate-operation-second'
+        denominator: 'seconds-per-hour'
+        output: 'estimate-operation-hour'
+    operation-carbon-multiply:
+      method: Multiply
+      path: '@grnsft/if-plugins'
+      global-config:
+        input-parameters: ['gpu/num', 'estimate-operation-hour', 'gpu/tdp', 'pue', 'carb_inten']
+        output-parameter: 'operation-carbon'
+
+tree:
+  children:
+    training-carbon:
+      pipeline:
+        - estimate-total-compute-multiply
+        - estimate-compute-per-second-multiply
+        - estimate-time-divide
+        - estimate-operation-hour-divide
+        - operation-carbon-multiply
+      defaults:
+        flop-count-factor: 6 # C_train ≈ 6PD
+        thousands-per-unit: 0.001
+        days-per-year: 365
+        hours-per-day: 24
+        seconds-per-hour: 3600
+      inputs:
+        - gpu/num: # the number of GPUs used for training LLM
+          gpu/tdp:  # kWh
+          # the power consumption per GPU per hour
+          gpu/flop_peak:
+          hardware-efficiency:
+          modal/parameters-count:
+          modal/tokens-count:
+          pue:
+          carb_inten: # CO2eq/KWh
+          # the carbon intensity of training region
+    inference-carbon:
+      pipeline:
+        - estimate-total-compute-multiply
+        - estimate-compute-per-second-multiply
+        - estimate-time-divide
+        - estimate-operation-hour-divide
+        - operation-carbon-multiply
+      defaults:
+        flop-count-factor: 2 # C_inference ≈ 2P * D_inference
+        thousands-per-unit: 0.001
+        days-per-year: 365
+        hours-per-day: 24
+        seconds-per-hour: 3600
+      inputs:
+        - gpu/num: # the number of GPUs used for inference LLM
+          gpu/tdp:  # kWh
+          # the power consumption per GPU per hour
+          gpu/flop_peak:
+          hardware-efficiency:
+          modal/parameters-count:
+          modal/tokens-count:
+          pue:
+          carb_inten: # CO2eq/KWh
+          # the carbon intensity of training region
