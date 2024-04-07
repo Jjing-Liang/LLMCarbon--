@@ -2,7 +2,6 @@
 
 ## Introduction
 
-<<<<<<< HEAD
 Since the introduction of ChatGPT, the field of Large Language Models (LLMs) has witnessed rapid evolution, with models like GPT-4, Mistral, and Grok-1 emerging one after another, exerting a profound influence on society. However, the environmental impact of LLMs has also sparked heated debates.
 
 The training and operation of LLMs require massive energy consumption, leading to significant carbon emissions, which contradicts global sustainable development goals. Therefore, it is imperative to promote the green development of LLMs.
@@ -13,12 +12,11 @@ As a participating team in [Carbon Hack 2024](https://hack.greensoftware.foundat
 - To access the full content of the tutorial, please follow [here](./content.md). 
 - For comprehensive usage instructions, please refer to the Usage section below.
 
-## Usage
-1. Install Impact Framework and the official plugins.
-=======
+
 # Usage
+
 ## 1. Install Impact Framework and the official plugins.
->>>>>>> 0c62b5b ([yuyan] update readme.MD)
+
 Install the Impact Framework and the official plugins globally using npm.
 ```bash
 npm install -g @grnsft/if
@@ -26,56 +24,9 @@ npm install -g @grnsft/if-plugins
 ```
 
 ## 2. Run the Example Manifest
+
 Before to build up your owner LLM Carbon manifest, you can run the example manifest to get the breif idea. You can download or copy the manifest yaml file in the [example folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/example) as you want.
 
-<<<<<<< HEAD
-The `llm-oprational-carbon.yml` is the example manifest for calculate the oprational carbon footprint of LLM, which includes [the data from LLaMA](https://arxiv.org/abs/2302.13971).
-You can use the IF Framework command to run the manifest:
-```bash
-ie --manifest llm-oprational-carbon.yml 
-```
-If you want to get the output as a yaml file, you can use the following command:
-```bash
-ie --manifest llm-oprational-carbon.yml --output <result_file_name>
-```
-You can find the LLM operational carbon in the result:
-```yaml
-...
-...
-tree:
-  children:
-    child:
-      pipeline:
-        - training-operation-carbon-multiply
-      inputs:
-        - gpu/num: 992
-          training_hour: 82432
-          gpu/tdp: 0.4
-          pue: 1.1
-          carb_inten: 0.385
-      outputs:
-        - gpu/num: 992
-          training_hour: 82432
-          gpu/tdp: 0.4
-          pue: 1.1
-          carb_inten: 0.385
-          operation-carbon: 13852268.953600002
-```
-The operation carbon is 13852268.953600002 kgCO2
-
-The other files in [example folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/example) use the [GPT-3 data](https://arxiv.org/abs/2005.14165) and they are:
-`llm-carbon-basic.yml`: use the basic formula to calculat oprational carbon and embodied carbon.
-`llm-carbon-with-estimated-training-time1.yml` and `llm-carbon-with-estimated-training-time2.yml`: use the formula with estimated LLM training hours to calculat oprational carbon and embodied carbon.
-
-3. Cumpute with customized manifest file
-According to your requirements, you can utilize the manifest template files located in the [manifest folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/manifest) to compute LLM training carbon emissions.
-The files `llm-carbon-basic.yml`, `llm-oprtaional-carbon.yml`, `llm-embodied-carbon.yml`, and `llm-embodied-carbon-using-scim.yml` contain sample input data.
-
-If you lack precise LLM training times but possess detailed LLM model data, such as model parameter numbers and token counts, you can calculate LLM training carbon emissions using estimated training times with the files `llm-carbon-with-estimated-training-time1&2.yml`, `llm-oprtaional-carbon-with-estimated-training-time1&2.yml`, and `llm-embodied-carbon-with-estimated-training-time1&2.yml`.
-
-## Application
-=======
->>>>>>> 0c62b5b ([yuyan] update readme.MD)
 For calculating the LLM Carbon Footprint, we employ the basic formula for calculating the carbon footprint: `CO2eq = CO2eq_oper + CO2eq_emb`. The `CO2eq_oper` term represents the carbon footprint of the operation of the LLM, while the `CO2eq_emb` term represents the carbon footprint of the embedding of the LLM.
 
 The fundamental equation for `CO2eq_oper` is `CO2eq_oper = energy_oper * carb_inten`, where `energy_oper` represents the energy utilized during the operation of the LLM, and `carb_inten` denotes the carbon intensity of the energy consumed.
@@ -299,4 +250,5 @@ For the computation required for training, we can use the formula `C_train ≈ 6
 You can find the manifest file in the repo's [example folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/example) as `llm-carbon-with-estimated-training-time1.yml` and `llm-carbon-with-estimated-training-time2.yml`. 
 
 ## 3. Cumpute with customized data
+
 According to your requirements, you can utilize the manifest template files located in the [manifest folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/manifest) to compute LLM training carbon emissions.
