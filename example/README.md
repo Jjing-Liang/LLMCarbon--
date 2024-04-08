@@ -2,7 +2,7 @@ The yaml manifest files in the `example` folder are used to illustrate how to us
 For details, please refer to the [content](https://github.com/Jjing-Liang/LLMCarbon--/blob/main/content.md).
 
 # Files
-- `llm-oprational-carbon.yml`: using basic input to calculate the LLM oprational carbon footprint(the equation is: `CO2eq_oper =  n * T * TDP * PUE * carb_inten`). The sample data comes from [LLaMA](https://arxiv.org/abs/2302.13971). The `llm-oprational-carbon-result.yaml` is the result.
+- `llm-operational-carbon.yml`: using basic input to calculate the LLM operational carbon footprint(the equation is: `CO2eq_oper =  n * T * TDP * PUE * carb_inten`). The sample data comes from [LLaMA](https://arxiv.org/abs/2302.13971). The `llm-operational-carbon-result.yaml` is the result.
 
 - `llm-carbon-basic.yml`: using the basic input to calculate the LLM carbon footprint. The sample data comes from [GPT3](https://arxiv.org/abs/2005.14165). The `llm-carbon-basic-result.yaml` is the result.
                                 
