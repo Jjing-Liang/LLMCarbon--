@@ -45,7 +45,7 @@ Based on the provided formula, the LLM `CO2eq` can be computed using the IF Fram
 
 Here is a basic manifest(you can find it in the repo's [examples folder](https://github.com/Jjing-Liang/LLMCarbon--/tree/main/example)):
 
-The `llm-carbon-basic.yml` is the example manifest for calculate the oprational carbon footprint of LLM, which includes [the data from GPT3](https://arxiv.org/abs/2005.14165). Methods such as Sum, Multiply, and Divide from the IF official plugin are utilized to construct the formula. 
+The `llm-carbon-basic.yml` is the example manifest for calculate the operational carbon footprint of LLM, which includes [the data from GPT3](https://arxiv.org/abs/2005.14165). Methods such as Sum, Multiply, and Divide from the IF official plugin are utilized to construct the formula. 
 
 ```yaml
 # llm-carbon-basic.yml
